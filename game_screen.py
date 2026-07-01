@@ -1,8 +1,11 @@
 import sys
+import termios, tty
 from typing import Annotated, Dict, List
 from enum import Enum
 from annotated_types import Le
+from rich.align import Align
 from rich.console import Console
+from rich.padding import Padding
 from rich.prompt import Prompt
 from rich.layout import Layout
 from rich.panel import Panel
@@ -23,16 +26,24 @@ class Directions(Enum):
     SE = 6
     SW = 7
 
+class GameSignal(Enum):
+    CONTINUE_GAME = 0
+    END_GAME = 1
+
+class GameResult(BaseModel):
+    remark : str
+    success : bool
+    actual_killer : str
+
 class FOCUSED_WINDOW(Enum):
     NPC_SELECTION_SCREEN = 0
     CHAT_PANEL = 1
+    ACCUSE_WINDOW = 2
 
 type NPCS = Dict[str, NPC]
 type CHAT_HISTORY = Dict[str, str]
 
 USER_QUESTION_MAX_LEN = 130
-MAX_ACCUSE = 3
-ACCUSE_UNLOCK = 3
 METER_INTERVAL = 25
 
 def _multiple_of_25(x: int) -> int:
@@ -42,7 +53,6 @@ def _multiple_of_25(x: int) -> int:
 
 class Gamevariable(BaseModel):
     ESCAPE_METER: Annotated[int, Le(100), AfterValidator(_multiple_of_25)] = 0
-    ACCUSE_READY: bool = False
     CONVERSATION_COUNT: Annotated[int, Le(9)] = 0
 
 associated_positions: Dict[Directions, Panel] = dict()
@@ -102,7 +112,6 @@ def render_npc_panels(selected: int, is_selected: bool) -> Panel:
         padding=(0, 1),
     )
 
-
 def render_chat_panel(
     chat_history : CHAT_HISTORY,
     selected_npc_name : str,
@@ -113,53 +122,125 @@ def render_chat_panel(
     border_style = "bold red" if is_selected else "white"
     return Panel(t, border_style=border_style, box=box.SQUARE, padding=(1, 1))
 
-def render_header(header : Panel):
-    pass
+def render_accuse_panel(npcn: List[str], selected_accuse: int) -> Panel:
+    t = Text(justify="center")
+    for idx, npc in enumerate(npcn):
+        if selected_accuse == idx:
+            t.append(f"{idx + 1}. {npc}\n", style="bold red")
+        else:
+            t.append(f"{idx + 1}. {npc}\n", style="white")
+    return Panel(
+        t,
+        title="[bold white]Accuse[/]",
+        subtitle="[bold white] Up/Down, Press ENTER to ACCUSE [/]",
+        border_style="bold red",
+        box=box.DOUBLE,
+        width=40,
+        padding=(1, 2),
+    )
+
+def escape_bar(pct: int, width: int = 20) -> Text:
+    filled = int(width * pct / 100)
+    t = Text()
+    t.append("█" * filled,            style="bold red")
+    t.append("█" * (width - filled),  style="dim white")
+    t.append(f"  {pct}%",             style="bold red" if pct >= 75 else "bold yellow" if pct >= 50 else "white")
+    return t
+
+def render_header(pct: int, case_title: str = "test case #1") -> Panel:
+    t = Text()
+    t.append("RECALL", style="bold white")
+    t.append("  |  ", style="dim white")
+    t.append(case_title, style="bold white")
+    t.append("  |  Escape: ", style="dim white")
+    t.append_text(escape_bar(pct))
+    return Panel(t, box=box.SQUARE, border_style="white", padding=(0, 1))
+
+## Misc
+## Move this to termios class
+def read_key() -> str:
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+        if ch == '\033':
+            ch += sys.stdin.read(2)  # read [ and D/C
+        return ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
 ## Main game loop
 
-def game(npcs: NPCS | None):
+def end_game(game_variable : Gamevariable ,accused_npc : str ,killer : str = npcn[0]) -> GameSignal:
+    if accused_npc == killer: 
+        return GameSignal.END_GAME
+    elif game_variable.ESCAPE_METER == 100:
+        return GameSignal.END_GAME
+
+    return GameSignal.CONTINUE_GAME
+
+def generate_result(game_variable : Gamevariable, signal : GameSignal,  accused_npc : str, killer : str =  npcn[0]) -> GameResult:
+    result : GameResult = GameResult(remark="",success=True,actual_killer=killer)
+
+    if game_variable.ESCAPE_METER <= 50:
+        result.remark  = "Good Job"
+    elif 50 <= game_variable.ESCAPE_METER < 100:
+        result.remark = "Close Call"
+    elif game_variable.ESCAPE_METER == 100:
+        result.remark = "Criminal Escaped"
+        result.success = False
+
+    return result 
+
+def game(npcs: NPCS | None) -> GameResult:
     selected_npc = 0
     selected_screen = FOCUSED_WINDOW.NPC_SELECTION_SCREEN
     console = Console()
-    layout = Layout()
+    accuse_idx: int = 0
+    main_game_layout = Layout()
     chat_history : CHAT_HISTORY = {}
     game_variable : Gamevariable = Gamevariable()
 
     associate_panels(npcn)
     assign_chat_histort(chat_history,npcn) ## Handle back-n-forth of npcs, for now only add user question
 
-    layout.split_column(
-        Layout(Panel(Text("HI")), name="header", size=5),  # fixed height in lines
+    main_game_layout.split_column(
+        Layout(render_header(game_variable.ESCAPE_METER), name="header", size=5),  # fixed height in lines
         Layout(name="lower"),
     )
 
-    layout["lower"].split_row(
+    main_game_layout["lower"].split_row(
                 Layout(render_npc_panels(selected_npc, True), name="npcs"),
                 Layout(render_chat_panel(chat_history,npcn[selected_npc], False), name="chat"),
     )
 
-    CHAT_PANEL_SENTINAL = "CHAT"
+    CHAT_PANEL_SENTINAL = "C"
     NPC_PANE_SENTINAL = "NPC"
 
-    console.print(layout)
+    console.print(main_game_layout)
     while True:
         sys.stdout.write("\033[2J")
         sys.stdout.write("\033[H")
         sys.stdout.flush()
 
-        if game_variable.CONVERSATION_COUNT % 3 == 0:
-            game_variable.ACCUSE_READY = True
+        main_game_layout["header"].update(render_header(game_variable.ESCAPE_METER))
+
+        if game_variable.CONVERSATION_COUNT % 3 == 0 and game_variable.CONVERSATION_COUNT > 0:
+            game_variable.CONVERSATION_COUNT = 0
+            selected_screen = FOCUSED_WINDOW.ACCUSE_WINDOW
+            continue
             # block and go to accuse screen (pop up screen), from there set accuse false and escape meter
         
         if selected_screen == FOCUSED_WINDOW.NPC_SELECTION_SCREEN:
-            layout["npcs"].update(render_npc_panels(selected_npc, True))
-            layout["chat"].update(render_chat_panel(chat_history,npcn[selected_npc], False))
+            main_game_layout["npcs"].update(render_npc_panels(selected_npc, True))
+            main_game_layout["chat"].update(render_chat_panel(chat_history,npcn[selected_npc], False))
 
-            console.print(layout)
+            console.print(main_game_layout)
 
             dir_selected = Prompt.ask(
                 f"[red] Enter Direction (Type {CHAT_PANEL_SENTINAL} (in caps) to start conversation with {npcn[selected_npc]} ) [/red]:",
-                choices=["N", "NW", "NE", "S", "SE", "SW", "E", "W", f"{ CHAT_PANEL_SENTINAL }"],
+                choices=["N", "NW", "NE", "S", "SE", "SW", "E", "W", CHAT_PANEL_SENTINAL],
                 default="N",
                 case_sensitive=False,
             )
@@ -171,19 +252,50 @@ def game(npcs: NPCS | None):
                 selected_screen = FOCUSED_WINDOW.CHAT_PANEL
 
         elif selected_screen == FOCUSED_WINDOW.CHAT_PANEL:
-            layout["npcs"].update(render_npc_panels(selected_npc, False))
-            layout["chat"].update(render_chat_panel(chat_history,npcn[selected_npc], True))
+            main_game_layout["npcs"].update(render_npc_panels(selected_npc, False))
+            main_game_layout["chat"].update(render_chat_panel(chat_history,npcn[selected_npc], True))
 
-            console.print(layout)
+            console.print(main_game_layout)
 
             prompt = Prompt.ask(
                 f"[red] Chat (Type { NPC_PANE_SENTINAL } (in caps) to get back to npc selected_screen) [/red]:", default=" ", case_sensitive=False
             )
-            chat_history[npcn[selected_npc]] += f"\nUSER: {prompt}\n"
-            game_variable.CONVERSATION_COUNT += 1
+
             if prompt == NPC_PANE_SENTINAL:
                 selected_screen = FOCUSED_WINDOW.NPC_SELECTION_SCREEN
+            else:
+                game_variable.CONVERSATION_COUNT += 1
+                chat_history[npcn[selected_npc]] += f"\nUSER: {prompt}\n"
 
+        elif selected_screen == FOCUSED_WINDOW.ACCUSE_WINDOW:
 
+            console.print(Align.center(
+                    Padding(render_accuse_panel(npcn, accuse_idx), pad=(10, 0)),
+            ))
+
+            key = read_key()
+            if key == "\033[B":              # down
+                accuse_idx = min(accuse_idx + 1, len(npcn) - 1)
+            elif key == "\033[A":            # up
+                accuse_idx = max(0, accuse_idx - 1)
+            elif key in (" ", "\r", "\n"):   # confirm
+                selected_screen = FOCUSED_WINDOW.NPC_SELECTION_SCREEN
+                game_variable.ESCAPE_METER += 25
+                signal : GameSignal = end_game(game_variable,npcn[accuse_idx])
+
+                if signal == GameSignal.END_GAME:
+                    print("GAME END")
+                    break
+
+                accuse_idx = 0
+
+            elif key == "\x03":              # ctrl+c
+                sys.stdout.write("\033[?25h")
+                sys.exit(0)
+    
+    result : GameResult =  generate_result(game_variable,signal,npcn[0])
+    print(result.remark)
+    return result
+    
 if __name__ == "__main__":
-    game(None)
+   game(None) 
