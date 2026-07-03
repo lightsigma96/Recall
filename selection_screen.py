@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import sys
-from biomes import victorian_england
+from biomes import victorian_england,forest
 from typing import List
 from typing import List
 import sys
@@ -13,7 +13,6 @@ import tty
 from pydantic import BaseModel
 import termios
 
-
 class Biome(BaseModel):
     name: str
     description: str
@@ -22,7 +21,7 @@ class Biome(BaseModel):
 
 BIOMES: List[Biome] = [
     Biome(
-        name="Victorian England",
+        name="victorian_england",
         description="1800s London. Fog. Gaslit alleys.\nEvery shadow hides a secret.",
         ascii_art=victorian_england["Dockyard"],
         locations=[
@@ -37,39 +36,9 @@ BIOMES: List[Biome] = [
         ],
     ),
     Biome(
-        name="Modern City",
-        description="Glass towers. Rooftop parties.\nSurveillance everywhere — except where it matters.",
-        ascii_art=MODERN_ASCII,
-        locations=[
-            "Penthouse",
-            "Corporate Office",
-            "Nightclub",
-            "Parking Garage",
-            "Subway Station",
-            "Luxury Hotel",
-            "Cafe",
-            "Police Precinct",
-        ],
-    ),
-    Biome(
-        name="Industrial Town",
-        description="Factory smoke. Canal docks.\nThe workers saw everything. None will talk.",
-        ascii_art=INDUSTRIAL_ASCII,
-        locations=[
-            "Factory Floor",
-            "Boiler Room",
-            "Foreman Office",
-            "Canal Docks",
-            "Workers Pub",
-            "Warehouse",
-            "Rail Yard",
-            "Abandoned Mill",
-        ],
-    ),
-    Biome(
-        name="Forest Wilderness",
+        name="forest",
         description="Remote trails. Watchtowers.\nOut here, no one calls for help.",
-        ascii_art=FOREST_ASCII,
+        ascii_art=forest["Watch_Tower"],
         locations=[
             "Ranger Cabin",
             "Watchtower",
@@ -122,11 +91,9 @@ def read_key() -> str:
 
 def biome_selection() -> Biome:
     selected_idx = 0
-    sys.stdout.write("\033[H\033[2J")
-    sys.stdout.write("\033[?25l")
 
     while True:
-        sys.stdout.write("\033[H")
+        print("\033[H\033[2J\033[3J", end="", flush=True)
         sys.stdout.flush()
         render_menu(selected_idx)
 

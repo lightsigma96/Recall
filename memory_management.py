@@ -66,11 +66,6 @@ class MemoryManager:
 
         res.raise_for_status()
 
-        try:
-            print(res.json())
-        except ValueError:
-            print(res.text) 
-
     def recall_http_request(
         self,
         user_question: str,
@@ -150,8 +145,6 @@ class MemoryManager:
             source_dataset,
             user_question,
         )
-
-        print("Recall Response:", recalled)
 
         npc_name = source_dataset.removesuffix("_ds")
 

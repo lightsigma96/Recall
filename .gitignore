@@ -4,3 +4,6 @@ watch_out.md
 .env
 .venv
 env.sh
+assets/
+log.txt
+temp.py

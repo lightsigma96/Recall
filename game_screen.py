@@ -2,6 +2,8 @@ import sys
 import termios, tty
 from typing import Annotated, Dict, List, Tuple
 from enum import Enum
+from biomes import victorian_england, forest
+from selection_screen import Biome
 from annotated_types import Le
 from rich.align import Align
 from rich.console import Console
@@ -21,11 +23,9 @@ class Directions(Enum):
     N = 0
     NE = 1
     NW = 2
-    E = 3
-    W = 4
-    S = 5
-    SE = 6
-    SW = 7
+    S = 3
+    SE = 4
+    SW = 5
 
 
 class GameSignal(Enum):
@@ -45,7 +45,9 @@ class FOCUSED_WINDOW(Enum):
     ACCUSE_WINDOW = 2
 
 
-type NPCS = Dict[str, NPC]
+type NPCS = Dict[
+    str, NPC
+]  ## THIS DATA TYPE IS A REDUNDENCY, CHANGE IT LATER ELSE IT WILL BREAK THINGS
 type CHAT_HISTORY = Dict[str, str]
 
 USER_QUESTION_MAX_LEN = 130
@@ -63,14 +65,26 @@ class Gamevariable(BaseModel):
     CONVERSATION_COUNT: Annotated[int, Le(9)] = 0
 
 
+## GLOBAL, MOVE LATER
 associated_positions: Dict[Directions, Panel] = dict()
 
 
-def associate_panels(npc_names_list: List[str]):
-    """Creates Panel AND Assign Their positions"""
-    for idx, (name, dirs) in enumerate(zip(npc_names_list, Directions)):
+def associate_panels(npcs: NPCS, biome_selected: Biome):
+    """Creates test NPC panels with ascii art"""
+
+    biome_dict: Dict[str, str] = dict()
+    if biome_selected.name == "victorian_england":
+        biome_dict = victorian_england
+    elif biome_selected.name == "forest":
+        biome_dict = forest
+
+    for npc_name, (k, v), dirs in zip(npcs.keys(), biome_dict.items(), Directions):
         associated_positions[dirs] = Panel(
-            Text(f"{name} ({Directions(idx).name})"),
+            Align.center(
+                Text(
+                    f"{v.strip()}\n" f"{npc_name} ({dirs.name})",
+                ),
+            ),
             border_style="white",
             box=box.SQUARE,
             padding=(1, 1),
@@ -82,44 +96,50 @@ def assign_chat_histort(chat_history: CHAT_HISTORY, npc_names_list: List[str]):
         chat_history[name] = f"{name}\n\n"
 
 
-## Layouts
-# npcn = [
-#    "Lord Ashton",
-#    "Margaret",
-#    "Barkeep Tom",
-#    "Sailor Pete",
-#    "Insp. Grey",
-#    "Dr. Whitmore",
-#    "Sister Anne",
-#    "Dock Foreman",
-# ]
-
-
 def render_npc_panels(selected: int, is_selected: bool) -> Panel:
-    for p in associated_positions.values():
-        p.border_style = "dim white"
-    associated_positions[Directions(selected)].border_style = "bold yellow"
+    for idx, p in enumerate(associated_positions.values()):
+        if idx == selected:
+            p.border_style = "dim yellow"
+        else:
+            p.border_style = "dim white"
 
-    boxes = [p for _, p in associated_positions.items()]
-    boxes.insert(
-        4,
-        Panel(
-            Text("YOU", justify="center", style="bold white"),
-            border_style="white",
-            box=box.SQUARE,
-            padding=(1, 2),
+    boxes = list(associated_positions.values())
+
+    you = Panel(
+        Align.center("YOU"),
+        border_style="white",
+        box=box.SQUARE,
+        height=3,
+    )
+
+    rows = Group(
+        Columns(
+            [
+                boxes[2],  # NW
+                boxes[0],  # N
+                boxes[1],  # NE
+            ],
+            equal=True,
+            expand=True,
+        ),
+        Align.center(
+            you,
+            vertical="middle",
+        ),
+        Columns(
+            [
+                boxes[5],  # SW
+                boxes[4],  # SE
+                boxes[3],  # S
+            ],
+            equal=True,
+            expand=True,
         ),
     )
-    border_style: str = "white"
-    if is_selected:
-        border_style = "red"
+
     return Panel(
-        Group(
-            Columns(boxes[0:3], equal=True, expand=True),
-            Columns(boxes[3:6], equal=True, expand=True),
-            Columns(boxes[6:9], equal=True, expand=True),
-        ),
-        border_style=border_style,
+        rows,
+        border_style="red" if is_selected else "white",
         box=box.SQUARE,
         padding=(0, 1),
     )
@@ -203,9 +223,7 @@ def end_game(game_variable: Gamevariable, accused_npc: str, killer: str) -> Game
     return GameSignal.CONTINUE_GAME
 
 
-def generate_result(
-    game_variable: Gamevariable, signal: GameSignal, killer: str
-) -> GameResult:
+def generate_result(game_variable: Gamevariable, killer: str) -> GameResult:
     result: GameResult = GameResult(remark="", success=True, actual_killer=killer)
 
     if game_variable.ESCAPE_METER <= 50:
@@ -219,7 +237,7 @@ def generate_result(
     return result
 
 
-async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
+async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameResult:
     selected_npc = 0
     selected_screen = FOCUSED_WINDOW.NPC_SELECTION_SCREEN
     console = Console()
@@ -233,7 +251,7 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
     else:
         raise ValueError("NONE PASSED")
 
-    associate_panels(npcn)
+    associate_panels(npcs[1], biomes_selected)
     assign_chat_histort(
         chat_history, npcn
     )  ## Handle back-n-forth of npcs, for now only add user question
@@ -254,13 +272,13 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
     NPC_PANE_SENTINAL = "NPC"
 
     while True:
-        sys.stdout.write("\033[2J")
-        sys.stdout.write("\033[H")
+        print("\033[H\033[2J\033[3J", end="", flush=True)
         sys.stdout.flush()
 
         main_game_layout["header"].update(render_header(game_variable.ESCAPE_METER))
+        if selected_screen != FOCUSED_WINDOW.ACCUSE_WINDOW:
+            console.print(main_game_layout)
 
-        console.print(main_game_layout)
         if (
             game_variable.CONVERSATION_COUNT % 3 == 0
             and game_variable.CONVERSATION_COUNT > 0
@@ -280,8 +298,6 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
                     "S",
                     "SE",
                     "SW",
-                    "E",
-                    "W",
                     CHAT_PANEL_SENTINAL,
                 ],
                 default="N",
@@ -291,7 +307,9 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
             if dir_selected != CHAT_PANEL_SENTINAL:
                 selected_npc = Directions[dir_selected].value
                 main_game_layout["npcs"].update(render_npc_panels(selected_npc, True))
-                main_game_layout["chat"].update(render_chat_panel(chat_history, npcn[selected_npc], False))
+                main_game_layout["chat"].update(
+                    render_chat_panel(chat_history, npcn[selected_npc], False)
+                )
             elif dir_selected == CHAT_PANEL_SENTINAL:
                 main_game_layout["npcs"].update(render_npc_panels(selected_npc, False))
                 main_game_layout["chat"].update(
@@ -320,7 +338,7 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
                     render_chat_panel(chat_history, npcn[selected_npc], True)
                 )
                 console.print(main_game_layout)
-                console.print(Text("Loading..."))
+                console.print(Text(f"[bold red]{npcn[selected_npc]} is thinking...[/]"))
                 answer: str = await npcs[1][npcn[selected_npc]].generate_response(
                     prompt
                 )
@@ -335,8 +353,10 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
 
             console.print(
                 Align.center(
-                    Padding(render_accuse_panel(npcn, accuse_idx), pad=(10, 0)),
-                )
+                    render_accuse_panel(npcn, accuse_idx),
+                    vertical="middle",
+                ),
+                height=console.height,
             )
 
             key = read_key()
@@ -350,7 +370,7 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
                 signal: GameSignal = end_game(game_variable, npcn[accuse_idx], npcs[0])
 
                 if signal == GameSignal.END_GAME:
-                    print("GAME END")
+                    console.print("[bold red]GAME END[/]")
                     break
                 elif signal == GameSignal.CONTINUE_GAME:
                     accuse_idx = 0
@@ -365,5 +385,5 @@ async def game(npcs: Tuple[str, NPCS] | None) -> GameResult:
                 sys.stdout.write("\033[?25h")
                 sys.exit(0)
 
-    result: GameResult = generate_result(game_variable, signal, npcs[0])
+    result: GameResult = generate_result(game_variable, npcs[0])
     return result
