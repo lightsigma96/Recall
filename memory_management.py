@@ -1,44 +1,161 @@
-from types import FunctionType
 import random
+import io
 from typing import Dict, List, Set
+import os, dotenv
 import cognee
-from cognee.api.v1.recall.recall import RecallResponse
+import requests
+
+
+def get_cognee_api_key():
+    dotenv.load_dotenv()
+    return os.getenv("COGNEE_API_KEY")
+
 
 class MemoryManager:
-    """Talks with Memory Handler (currently Cognee)"""
+    """Talks with Cognee Cloud."""
+
+    BASE_URL = "https://tenant-c16c2b32-7f8c-4fbe-8fa7-a3b9500601be.aws.cognee.ai"
 
     def __init__(self) -> None:
-        ## npc count is 8 always
         self.npc_datasets_name: Set[str] = set()
 
     def _validate_dataset(self, dataset: str):
         if dataset not in self.npc_datasets_name:
             raise ValueError(f"Unknown dataset: {dataset}")
 
+    def _headers(self) -> dict:
+        api_key = get_cognee_api_key()
+
+        if not api_key:
+            raise requests.HTTPError("COGNEE API KEY NOT FOUND")
+
+        return {
+            "X-Api-Key": api_key,
+        }
+
+    def remember_http_request(
+        self,
+        remember_text: str,
+        dataset_name: str,
+    ):
+        api_key = get_cognee_api_key()
+        files = [
+            (
+                "data",
+                (
+                    "memory.txt",
+                    io.BytesIO(remember_text.encode()),
+                    "text/plain",
+                ),
+            )
+        ]
+        
+        if not api_key:
+            raise requests.HTTPError("COGNEE_API_KEY NOT FOUND")
+
+        payload = {
+            "datasetName": dataset_name,
+        }
+
+        res = requests.post(
+            f"{self.BASE_URL}/api/v1/remember",
+            headers={"X-Api-Key": api_key},
+            files=files,
+            data=payload,
+        )
+
+        res.raise_for_status()
+
+        try:
+            print(res.json())
+        except ValueError:
+            print(res.text) 
+
+    def recall_http_request(
+        self,
+        user_question: str,
+        dataset_name: str,
+    ):
+        payload = {
+            "searchType": "GRAPH_COMPLETION",
+            "datasets": [dataset_name],
+            "query": user_question,
+            "topK": 15,
+        }
+
+        headers = self._headers()
+        headers["Content-Type"] = "application/json"
+
+        response = requests.post(
+            f"{self.BASE_URL}/api/v1/recall",
+            headers=headers,
+            json=payload,
+        )
+
+        response.raise_for_status()
+
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
+
     async def initialize_memory(self, npc_datasets: Dict[str, str]):
-        for npc, initialize_memory in npc_datasets.items():
-            self.npc_datasets_name.add(f"{npc}_ds")
-            await cognee.remember(initialize_memory, dataset_name=f"{npc}_ds")
+        for npc, memory in npc_datasets.items():
+            dataset_name = npc.replace(" ", "_").replace(".", "_") + "_ds"
 
-    async def update_memory(self, npc_dataset: str, to_remember: str):
-        self._validate_dataset(npc_dataset)
-        await cognee.remember(to_remember, dataset_name=npc_dataset)
+            self.npc_datasets_name.add(dataset_name)
 
-    async def recall_memory(self, npc_dataset: str, user_question : str) -> List[RecallResponse]:
+            self.remember_http_request(
+                memory,
+                dataset_name,
+            )
+
+    async def update_memory(
+        self,
+        npc_dataset: str,
+        to_remember: str,
+    ):
         self._validate_dataset(npc_dataset)
-        return await cognee.recall(query_text=user_question, datasets=[npc_dataset])
+
+        self.remember_http_request(
+            to_remember,
+            npc_dataset,
+        )
+
+    async def recall_memory(
+        self,
+        npc_dataset: str,
+        user_question: str,
+    ):
+        self._validate_dataset(npc_dataset)
+
+        return self.recall_http_request(
+            user_question,
+            npc_dataset,
+        )
 
     async def clear_memories(self, npc_dataset: str):
+        self._validate_dataset(npc_dataset)
         await cognee.forget(dataset=npc_dataset)
-        pass
 
-    async def propagate_memories(self, user_question : str):
-        """The gossip where npcs interact with each other, this function is called once in a while"""
-        
-        sample_list : List[str] = random.sample(list(self.npc_datasets_name), k=2)
+    async def propagate_memories(self, user_question: str):
+        """Randomly propagates information between two NPCs."""
 
-        recalled = await self.recall_memory(sample_list[0],user_question)
+        source_dataset, target_dataset = random.sample(
+            list(self.npc_datasets_name),
+            k=2,
+        )
 
-        npc_name = sample_list[0].split("_")[0]
-        await self.update_memory(sample_list[1], f"{npc_name} was questioned about {recalled}")
-    
+        recalled = await self.recall_memory(
+            source_dataset,
+            user_question,
+        )
+
+        print("Recall Response:", recalled)
+
+        npc_name = source_dataset.removesuffix("_ds")
+
+        await self.update_memory(
+            target_dataset,
+            f"{npc_name} was questioned about: {recalled}",
+        )

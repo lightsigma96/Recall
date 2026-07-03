@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import sys
+from biomes import victorian_england
 from typing import List
 from typing import List
 import sys
@@ -12,49 +13,6 @@ import tty
 from pydantic import BaseModel
 import termios
 
-VICTORIAN_ASCII = """
-     ___________
-    |  _______  |
-    | |  [=]  | |
-    | |  [=]  | |
-    |_|_______|_|
-   /             \\
-  /_______________\\
- |  []    []    [] |
- |__________________|
-"""
-
-MODERN_ASCII = """
-    |  |  ||  |
-    |  |  ||  |
-  __|  |__|└──┘
- |  |__|  |
- |________|
- |  []  []|
- |________|
-  ‾‾‾‾‾‾‾‾
-"""
-
-INDUSTRIAL_ASCII = """
-  ||  __  ||
-  || |  | ||
-  |_-|  |-_|
-  |  |__|  |
-  |________|
- _|________|_
-|_____________|
-   ~~canal~~
-"""
-
-FOREST_ASCII = """
-   /\\   /\\  /\\
-  /  \\ /  \\/  \\
- /    X    \\   \\
-/____/ \\____\\___\\
-  |  [=]  |
-  |_______|
-  watchtower
-"""
 
 class Biome(BaseModel):
     name: str
@@ -66,26 +24,62 @@ BIOMES: List[Biome] = [
     Biome(
         name="Victorian England",
         description="1800s London. Fog. Gaslit alleys.\nEvery shadow hides a secret.",
-        ascii_art=VICTORIAN_ASCII,
-        locations=["Manor House", "Dark Alley", "Tavern", "Apothecary", "Church", "Dockyard"]
+        ascii_art=victorian_england["Dockyard"],
+        locations=[
+            "Manor House",
+            "Dark Alley",
+            "Tavern",
+            "Apothecary",
+            "Church",
+            "Dockyard",
+            "Theatre",
+            "Train Station",
+        ],
     ),
     Biome(
         name="Modern City",
         description="Glass towers. Rooftop parties.\nSurveillance everywhere — except where it matters.",
         ascii_art=MODERN_ASCII,
-        locations=["Rooftop Party", "Office Building", "Nightclub", "Parking Garage", "Cafe", "Police Station"]
+        locations=[
+            "Penthouse",
+            "Corporate Office",
+            "Nightclub",
+            "Parking Garage",
+            "Subway Station",
+            "Luxury Hotel",
+            "Cafe",
+            "Police Precinct",
+        ],
     ),
     Biome(
         name="Industrial Town",
         description="Factory smoke. Canal docks.\nThe workers saw everything. None will talk.",
         ascii_art=INDUSTRIAL_ASCII,
-        locations=["Factory Floor", "Foreman Office", "Canal Docks", "Workers Pub", "Warehouse", "Town Square"]
+        locations=[
+            "Factory Floor",
+            "Boiler Room",
+            "Foreman Office",
+            "Canal Docks",
+            "Workers Pub",
+            "Warehouse",
+            "Rail Yard",
+            "Abandoned Mill",
+        ],
     ),
     Biome(
         name="Forest Wilderness",
         description="Remote trails. Watchtowers.\nOut here, no one calls for help.",
         ascii_art=FOREST_ASCII,
-        locations=["Watchtower", "Ranger Cabin", "Forest Clearing", "Old Mill", "Hunting Lodge", "Forest Trail"]
+        locations=[
+            "Ranger Cabin",
+            "Watchtower",
+            "Forest Clearing",
+            "Old Mill",
+            "Hunting Lodge",
+            "Forest Trail",
+            "Abandoned Mine",
+            "Lake House",
+        ],
     ),
 ]
 

@@ -4,7 +4,6 @@ import requests
 from memory_management import MemoryManager
 from pydantic import BaseModel
 
-
 # types
 class llm_call_format(BaseModel):
     response: str
@@ -24,7 +23,7 @@ class NPC:
         self.name = name
         self.personality: str = personality
         self.environment: str = environment
-        self.dataset_name: str = f"{name}_ds"
+        self.dataset_name = f"{name.replace(' ', '_').replace('.', '_')}_ds"
 
         self.answer_format = {
             "type": "object",
@@ -34,6 +33,9 @@ class NPC:
             },
             "required": ["response", "summary"],
         }
+
+    def _sanitize_name(self,name: str) -> str:
+        return name.replace(" ", "_").replace(".", "_")
 
     def _llm_call(self, npc_recall, user_question: str):
         try:
@@ -72,12 +74,13 @@ class NPC:
             raise requests.HTTPError("Error occurred during model generation.") from e
 
     async def generate_response(self, user_question: str) -> str:
-
-        npc_recall: List[RecallResponse] = await self.mem_manager.recall_memory(
-            f"{self.name}_ds", user_question
-        )
+        
+        npc_recall = self.mem_manager.recall_http_request(user_question,self._sanitize_name(f"{self.name}_ds"))
+        #npc_recall: List[RecallResponse] = await self.mem_manager.recall_memory(
+        #    self._sanitize_name(f"{self.name}_ds"), user_question
+        #)
 
         llm_answer = self._llm_call(npc_recall, user_question)
 
-        await self.mem_manager.update_memory(f"{self.name}_ds", llm_answer.summary)
+        await self.mem_manager.update_memory(self._sanitize_name(f"{self.name}_ds"), llm_answer.summary)
         return llm_answer.response
