@@ -152,3 +152,6 @@ class MemoryManager:
             target_dataset,
             f"{npc_name} was questioned about: {recalled}",
         )
+
+if __name__ == "__main__":
+    print("RUN game_loop.py")

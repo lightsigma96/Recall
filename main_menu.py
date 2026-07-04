@@ -58,6 +58,7 @@ def render_main_menu():
     render_title()
     render_description()
 
+
 if __name__ == "__main__":
-    render_main_menu()
+    print("RUN game_loop.py")
 

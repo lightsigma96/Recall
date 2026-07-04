@@ -82,7 +82,7 @@ def associate_panels(npcs: NPCS, biome_selected: Biome):
         associated_positions[dirs] = Panel(
             Align.center(
                 Text(
-                    f"{v.strip()}\n" f"{npc_name} ({dirs.name})",
+                    f"{v.strip()}\n" f"{npc_name[:16]} ({dirs.name})",
                 ),
             ),
             border_style="white",
@@ -264,8 +264,8 @@ async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameRes
     )
 
     main_game_layout["lower"].split_row(
-        Layout(render_npc_panels(selected_npc, True), name="npcs"),
-        Layout(render_chat_panel(chat_history, npcn[selected_npc], False), name="chat"),
+        Layout(render_npc_panels(selected_npc, True), name="npcs", ratio=3),
+        Layout(render_chat_panel(chat_history, npcn[selected_npc], False), name="chat",ratio=2),
     )
 
     CHAT_PANEL_SENTINAL = "C"
@@ -338,7 +338,7 @@ async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameRes
                     render_chat_panel(chat_history, npcn[selected_npc], True)
                 )
                 console.print(main_game_layout)
-                console.print(Text(f"[bold red]{npcn[selected_npc]} is thinking...[/]"))
+                console.print(Text(f"{npcn[selected_npc]} is thinking...",style="bold red"))
                 answer: str = await npcs[1][npcn[selected_npc]].generate_response(
                     prompt
                 )
@@ -370,7 +370,7 @@ async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameRes
                 signal: GameSignal = end_game(game_variable, npcn[accuse_idx], npcs[0])
 
                 if signal == GameSignal.END_GAME:
-                    console.print("[bold red]GAME END[/]")
+                    console.print(Text("GAME END", style="bold red"))
                     break
                 elif signal == GameSignal.CONTINUE_GAME:
                     accuse_idx = 0
@@ -387,3 +387,6 @@ async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameRes
 
     result: GameResult = generate_result(game_variable, npcs[0])
     return result
+
+if __name__ == "__main__":
+    print("RUN game_loop.py")

@@ -60,5 +60,5 @@ def render_result(killer: str, completion_status: bool, remark: str):
 
 
 if __name__ == "__main__":
-    console: Console = Console()
-    render_result("elisia", True, "close call", console)
+    print("RUN game_loop.py")
+

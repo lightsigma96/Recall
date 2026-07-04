@@ -109,4 +109,5 @@ def biome_selection() -> Biome:
             sys.exit(0)
 
 if __name__ == "__main__":
-    biome_selection()
+    print("RUN game_loop.py")
+
