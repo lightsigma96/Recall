@@ -1,8 +1,8 @@
 # Recall
 
-An AI-driven murder mystery terminal game where every run creates a new story, suspects, killer, and conversations.
+#### An AI-driven murder mystery terminal game where every run creates a new story, suspects, killer, and conversations.
 
-Players investigate by talking to NPCs. NPCs remember previous conversations, react dynamically, and provide clues based on the generated mystery.
+#### Players investigate by talking to NPCs. NPCs remember previous conversations, react dynamically, and provide clues based on the generated mystery.
 
 ![Recall Title](title.png)
 ![Recall Game Screen](game_screen.png)
@@ -30,7 +30,8 @@ Players investigate by talking to NPCs. NPCs remember previous conversations, re
 
 ### Clone
 
-1. ` git clone git@github.com:lightsigma96/Recall.git ` 
+1. 
+` git clone git@github.com:lightsigma96/Recall.git ` 
 
 OR
 
