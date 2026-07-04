@@ -4,6 +4,13 @@
 
 #### Players investigate by talking to NPCs. NPCs remember previous conversations, react dynamically, and provide clues based on the generated mystery.
 
+<div align="center">
+
+![Cognee](https://img.shields.io/badge/Cognee-Hangover_Hackathon-00c8ff)
+![Python](https://img.shields.io/badge/Python-3.14.6-3776AB?logo=python&logoColor=white)
+![Rich](https://img.shields.io/badge/Rich-Console_UI-blueviolet)
+</div>
+
 ![Recall Title](title.png)
 ![Recall Game Screen](game_screen.png)
 
@@ -23,6 +30,16 @@
 3. Players interrogate NPCs.
 4. Conversations are stored in memory.
 5. Player uses gathered information to accuse the killer.
+
+| Game Stage | Cognee Cloud API | How Recall Uses It |
+|-----------|-----------------|--------------------|
+| NPC memory creation | `/api/v1/remember` | Stores each NPC's personality, secrets, relationships, and crime knowledge into a dedicated memory dataset |
+| Memory isolation | Cognee datasets | Creates a separate dataset for every NPC (`npc_name_ds`) so suspects only know their own memories |
+| Player interrogation | `/api/v1/recall` | Searches the NPC's memory when the player asks a question |
+| Memory retrieval | `GRAPH_COMPLETION` | Uses Cognee's graph-based recall to find relevant context from previous events and conversations |
+| Dynamic NPC responses | Recall → LLM context | Injects recalled memories into the LLM prompt so NPCs answer based on what they know |
+| Conversation memory | `/api/v1/remember` | Stores conversation summaries back into the NPC's dataset, allowing them to remember future interactions |
+| Information spreading (Future Feature) | Recall + Remember | Allows discovered information from one NPC memory graph to propagate into another NPC's memory |
 
 ## Setup
 
