@@ -43,7 +43,7 @@
 
 ## Setup
 
-**The game might break on Windows so set up a Docker container for Linux or maybe use a Mac.**
+**The game might break on Windows so set up a Docker container for Linux or maybe use a Mac. Docker Container setup given after this.**
 
 ### Clone
 
@@ -64,7 +64,7 @@ Set up a virtual environment with : ` python3 -m venv .venv `
 
 Activate virtual environment with : ` source .venv/bin/activate `
 
-Install using: ` pip install -r requirements.txt ` or ` python3 -m pip install -r requirements.txt `
+Install using: ` pip install -r requirements.txt ` or ` python3 -m pip install -r requirements.txt ` or ` pip install -r requirements.txt `
 
 ### Setting Up Cloud and Local Model for Game
 
@@ -87,6 +87,11 @@ EMBEDDING_ENDPOINT="http://localhost:11434/api/embed"
 EMBEDDING_DIMENSIONS="768"
 HUGGINGFACE_TOKENIZER="nomic-ai/nomic-embed-text-v1.5"
 ```
+
+### Docker Setup
+
+Use the Dockerfile to create a image and run a container.
+
 ## Tech Stack
 
 - Python
