@@ -1,0 +1,41 @@
+# secrets
+env.sh
+.env
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# git
+.git/
+.gitignore
+
+# images/assets not needed at runtime
+assets/
+title.png
+*.png
+
+# docs
+README.md
+plan.md
+watch_out.md
+
+# logs/temp
+*.log
+log.txt
+temp.py
+
+# virtual environments
+venv/
+.venv/
+
+# editor files
+.vscode/
+.idea/
+
+# docker
+dockerfile
+Dockerfile
+.dockerignore
