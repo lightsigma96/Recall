@@ -186,11 +186,9 @@ def escape_bar(pct: int, width: int = 20) -> Text:
     return t
 
 
-def render_header(pct: int, case_title: str = "test case #1") -> Panel:
+def render_header(pct: int ) -> Panel:
     t = Text()
     t.append("RECALL", style="bold white")
-    t.append("  |  ", style="dim white")
-    t.append(case_title, style="bold white")
     t.append("  |  Escape: ", style="dim white")
     t.append_text(escape_bar(pct))
     return Panel(t, box=box.SQUARE, border_style="white", padding=(0, 1))

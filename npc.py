@@ -3,7 +3,11 @@ from cognee.api.v1.recall.recall import RecallResponse
 import requests
 from memory_management import MemoryManager
 from pydantic import BaseModel
+import os, dotenv
 
+def load_local_model():
+    dotenv.load_dotenv()
+    return os.getenv("LLM_MODEL")
 
 # types
 class llm_call_format(BaseModel):
@@ -39,11 +43,15 @@ class NPC:
         return name.replace(" ", "_").replace(".", "_")
 
     def _llm_call(self, npc_recall, user_question: str):
+        local_model : str | None = load_local_model()
+        if not local_model:
+            local_model = "gemma3:4b"
+
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "gemma3:4b",
+                    "model": local_model,
                     "prompt": f"""
                         You are roleplaying a murder mystery suspect.
 
