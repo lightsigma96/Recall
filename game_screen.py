@@ -1,4 +1,5 @@
 import sys
+from memory_management import MemoryManager
 import termios, tty
 from typing import Annotated, Dict, List, Tuple
 from enum import Enum
@@ -235,7 +236,7 @@ def generate_result(game_variable: Gamevariable, killer: str) -> GameResult:
     return result
 
 
-async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameResult:
+async def game(mem_manager : MemoryManager,npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameResult:
     selected_npc = 0
     selected_screen = FOCUSED_WINDOW.NPC_SELECTION_SCREEN
     console = Console()
@@ -340,6 +341,7 @@ async def game(npcs: Tuple[str, NPCS] | None, biomes_selected: Biome) -> GameRes
                 answer: str = await npcs[1][npcn[selected_npc]].generate_response(
                     prompt
                 )
+                await mem_manager.propagate_memories(prompt)
                 chat_history[
                     npcn[selected_npc]
                 ] += f"\n{npcn[selected_npc]}: {answer}\n"

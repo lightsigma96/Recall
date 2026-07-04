@@ -134,7 +134,13 @@ class MemoryManager:
         await cognee.forget(dataset=npc_dataset)
 
     async def propagate_memories(self, user_question: str):
-        """Randomly propagates information between two NPCs."""
+        """Allows NPC rumors to spread."""
+
+        if len(self.npc_datasets_name) < 2:
+            return
+
+        if random.random() > 0.3:
+            return
 
         source_dataset, target_dataset = random.sample(
             list(self.npc_datasets_name),
@@ -150,7 +156,17 @@ class MemoryManager:
 
         await self.update_memory(
             target_dataset,
-            f"{npc_name} was questioned about: {recalled}",
+            f"""
+            You heard a rumor about {npc_name}.
+
+            They were questioned by the investigator.
+
+            Rumor:
+            {recalled}
+
+            This is second-hand information.
+            You do not know whether it is true.
+            """
         )
 
 if __name__ == "__main__":

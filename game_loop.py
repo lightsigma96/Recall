@@ -295,7 +295,7 @@ async def main():
             screen_state = ScreenState.INSTRUCTION_SCREEN
 
         elif screen_state == ScreenState.GAME_SCREEN:
-            game_result = await game(npcs, selected_biome)
+            game_result = await game(mem_manager, npcs, selected_biome)
             screen_state = ScreenState.RESULT_SCREEN
 
         elif screen_state == ScreenState.RESULT_SCREEN:
